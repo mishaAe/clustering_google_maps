@@ -176,34 +176,17 @@ class ClusteringHelper {
 
     for (var i = 0; i < aggregation.length; i++) {
       final a = aggregation[i];
-      //print(a.count);
-
       BitmapDescriptor bitmapDescriptor =
           await a.getBitmapDescriptor(aggregationSetup);
-
-//      if (a.count == 1) {
-//        if (bitmapAssetPathForSingleMarker != null) {
-//          bitmapDescriptor =
-//              BitmapDescriptor.fromAsset(bitmapAssetPathForSingleMarker);
-//        } else {
-//          bitmapDescriptor = BitmapDescriptor.defaultMarker;
-//        }
-//      } else {
-//        // >1
-//
-//        bitmapDescriptor = BitmapDescriptor.fromBytes(markerIcon);
-//      }
       final MarkerId markerId = MarkerId(a.getId());
 
       final marker = Marker(
-//        onTap: () {
-//          print("Marker");
-//          tapCallback(a);
-//        },
-        //consumeTapEvents: true,
+        onTap: () {
+          tapCallback(a);
+        },
+        consumeTapEvents: true,
         markerId: markerId,
         position: a.getLocation(),
-        infoWindow: InfoWindow(title: 'loool'),
         icon: bitmapDescriptor,
       );
 
@@ -224,9 +207,7 @@ class ClusteringHelper {
         markers.add(Marker(
             markerId: markerId,
             position: p.getLocation(),
-            infoWindow: InfoWindow(
-                title:
-                    "${p.getLocation().latitude.toStringAsFixed(2)},${p.getLocation().longitude.toStringAsFixed(2)}"),
+            consumeTapEvents: true,
             icon: bitmap,
             onTap: () {
               tapCallback(p);
