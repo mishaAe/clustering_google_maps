@@ -130,10 +130,14 @@ class ClusteringHelper {
 
   final List<ClusterItem> aggList = [];
 
-  List<ClusterItem> _retrieveAggregatedPoints(
-      List<ClusterItem> inputList, List<ClusterItem> resultList, int level) {
+  List<ClusterItem> _retrieveAggregatedPoints(List<ClusterItem> inputList,
+      List<ClusterItem> resultList, int level) {
     print("input list lenght: " + inputList.length.toString());
-
+    var selected = inputList.firstWhere((p) => p.isSelected, orElse: () {});
+    if (selected != null) {
+      resultList.add(selected);
+      inputList.removeWhere((p) => p.isSelected);
+    }
     if (inputList.isEmpty) {
       return resultList;
     }
@@ -141,22 +145,22 @@ class ClusteringHelper {
     List<ClusterItem> tmp;
     final t = newInputList[0].getGeoHash().substring(0, level);
     tmp = newInputList
-        .where((p) => p.getGeoHash().substring(0, level) == t && !p.isSelected)
+        .where((p) => p.getGeoHash().substring(0, level) == t)
         .toList();
-    newInputList.removeWhere((p) => p.getGeoHash().substring(0, level) == t && !p.isSelected);
+    newInputList.removeWhere((p) => p.getGeoHash().substring(0, level) == t);
     double latitude = 0;
     double longitude = 0;
     tmp.forEach((l) {
-      latitude += l.getLocation().latitude;
-      longitude += l.getLocation().longitude;
+      latitude += l
+          .getLocation()
+          .latitude;
+      longitude += l
+          .getLocation()
+          .longitude;
     });
     final count = tmp.length;
     ClusterItem a;
-    if (tmp.length == 0) {
-     a = newInputList[0];
-     newInputList.clear();
-    }
-     else if (tmp.length == 1)
+    if (tmp.length == 1)
       a = tmp[0];
     else
       a = AggregatedPoints(LatLng(latitude / count, longitude / count), count);
@@ -192,14 +196,14 @@ class ClusteringHelper {
       final MarkerId markerId = MarkerId(a.getId());
 
       final marker = Marker(
-        onTap: () {
-          print("Marker");
-          tapCallback(a);
-        },
-        consumeTapEvents: true,
+//        onTap: () {
+//          print("Marker");
+//          tapCallback(a);
+//        },
+        //consumeTapEvents: true,
         markerId: markerId,
         position: a.getLocation(),
-        //infoWindow: InfoWindow(title: a.count.toString()),
+        infoWindow: InfoWindow(title: 'loool'),
         icon: bitmapDescriptor,
       );
 
