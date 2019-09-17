@@ -1,11 +1,13 @@
+import 'package:clustering_google_maps/clustering_google_maps.dart';
 import 'package:example/app_db.dart';
 import 'package:example/fake_point.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:clustering_google_maps/clustering_google_maps.dart' show LatLngAndGeohash,ClusteringHelper,AggregationSetup;
+import 'package:clustering_google_maps/clustering_google_maps.dart'
+    show LatLngAndGeohash, ClusteringHelper, AggregationSetup;
 
 class HomeScreen extends StatefulWidget {
-  final List<LatLngAndGeohash> list;
+  final List<ClusterItem> list;
 
   HomeScreen({Key key, this.list}) : super(key: key);
 
@@ -15,6 +17,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   ClusteringHelper clusteringHelper;
+  GoogleMapController _mapController;
+  ClusterItem currentItem;
   final CameraPosition initialCameraPosition =
       CameraPosition(target: LatLng(0.000000, 0.000000), zoom: 0.0);
 
@@ -22,10 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onMapCreated(GoogleMapController mapController) async {
     print("onMapCreated");
+    _mapController = mapController;
     clusteringHelper.mapController = mapController;
-    if (widget.list == null) {
-      clusteringHelper.database = await AppDatabase.get().getDb();
-    }
     clusteringHelper.updateMap();
   }
 
@@ -39,23 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     if (widget.list != null) {
       initMemoryClustering();
-    } else {
-      initDatabaseClustering();
     }
 
     super.initState();
-  }
-
-  // For db solution
-  initDatabaseClustering() {
-    clusteringHelper = ClusteringHelper.forDB(
-      dbGeohashColumn: FakePoint.dbGeohash,
-      dbLatColumn: FakePoint.dbLat,
-      dbLongColumn: FakePoint.dbLong,
-      dbTable: FakePoint.tblFakePoints,
-      updateMarkers: updateMarkers,
-      aggregationSetup: AggregationSetup(),
-    );
   }
 
   // For memory solution
@@ -63,6 +51,18 @@ class _HomeScreenState extends State<HomeScreen> {
     clusteringHelper = ClusteringHelper.forMemory(
       list: widget.list,
       updateMarkers: updateMarkers,
+      tapCallback: (ClusterItem item) {
+        print("clicckedon");
+        print(item);
+        if (item is FakePoint) {
+          if (currentItem != null)
+            currentItem.isSelected = false;
+          item.isSelected = true;
+          currentItem = item;
+          _mapController.animateCamera(CameraUpdate.newLatLng(
+              LatLng(item.getLocation().latitude, item.getLocation().longitude)));
+        }
+      },
       aggregationSetup: AggregationSetup(markerSize: 150),
     );
   }
@@ -85,10 +85,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child:
             widget.list == null ? Icon(Icons.content_cut) : Icon(Icons.update),
         onPressed: () {
-          if (widget.list == null) {
-            //Test WHERE CLAUSE
-            clusteringHelper.whereClause = "WHERE ${FakePoint.dbLat} > 42.6";
-          }
           //Force map update
           clusteringHelper.updateMap();
         },

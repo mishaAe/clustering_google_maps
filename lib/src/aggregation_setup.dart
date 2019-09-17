@@ -15,8 +15,8 @@ class AggregationSetup {
   AggregationSetup({
     this.maxAggregationItems = const [10, 25, 50, 100, 500, 1000],
     this.colors = const [
-      Colors.grey,
       Colors.blue,
+      Colors.cyan,
       Colors.green,
       Colors.yellow,
       Colors.orange,
