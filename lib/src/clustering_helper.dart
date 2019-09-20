@@ -132,12 +132,6 @@ class ClusteringHelper {
 
   List<ClusterItem> _retrieveAggregatedPoints(List<ClusterItem> inputList,
       List<ClusterItem> resultList, int level) {
-    print("input list lenght: " + inputList.length.toString());
-    var selected = inputList.firstWhere((p) => p.isSelected, orElse: () {});
-    if (selected != null) {
-      resultList.add(selected);
-      inputList.removeWhere((p) => p.isSelected);
-    }
     if (inputList.isEmpty) {
       return resultList;
     }

@@ -55,15 +55,13 @@ class _HomeScreenState extends State<HomeScreen> {
         print("clicckedon");
         print(item);
         if (item is FakePoint) {
-          if (currentItem != null)
-            currentItem.isSelected = false;
-          item.isSelected = true;
+          item.state = 'lol';
           currentItem = item;
           _mapController.animateCamera(CameraUpdate.newLatLng(
               LatLng(item.getLocation().latitude, item.getLocation().longitude)));
         }
       },
-      aggregationSetup: AggregationSetup(markerSize: 150),
+      aggregationSetup: AggregationSetup(markerSize: 150, iconData: Map()),
     );
   }
 

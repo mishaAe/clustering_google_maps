@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class AggregationSetup {
   /// List of integern number, they are the limit of aggregation range
@@ -9,6 +10,8 @@ class AggregationSetup {
 
   /// List of double, they are the limit of zoom when change the aggregation level
   final List<double> maxZoomLimits;
+
+  final Map<String, BitmapDescriptor> iconData;
 
   final int markerSize;
 
@@ -33,6 +36,7 @@ class AggregationSetup {
       14.5,
     ],
     this.markerSize = 150,
+    this.iconData
   })  : assert(maxAggregationItems.length == 6),
         assert(colors.length == 7),
         assert(maxZoomLimits.length == 7),

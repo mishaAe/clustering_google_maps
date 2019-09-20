@@ -3,7 +3,7 @@ import 'package:geohash/geohash.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart'
     show BitmapDescriptor, LatLng;
 
-class FakePoint extends ClusterItem {
+class FakePoint extends StateItem {
   static final tblFakePoints = "fakePoints";
   static final dbId = "id";
   static final dbLat = "latitude";
