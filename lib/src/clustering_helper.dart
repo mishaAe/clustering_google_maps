@@ -217,7 +217,6 @@ class ClusteringHelper {
             onTap: () {
               tapCallback(p);
             }));
-        markers.first.alpha = 0.5;
       }
       updateMarkers(markers);
     } catch (ex) {
