@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:clustering_google_maps/clustering_google_maps.dart';
 import 'package:clustering_google_maps/src/aggregated_points.dart';
 import 'package:clustering_google_maps/src/aggregation_setup.dart';
 import 'package:clustering_google_maps/src/cluster_item.dart';
@@ -35,6 +36,7 @@ class ClusteringHelper {
   Function updateMarkers;
 
   Function tapCallback;
+  bool isSingleMarkers;
 
   //List of points for memory clustering
   List<ClusterItem> list;
@@ -108,15 +110,15 @@ class ClusteringHelper {
 
         final bool latQuery = (leftTopLatitude > rightBottomLatitude)
             ? p.getLocation().latitude <= leftTopLatitude &&
-                p.getLocation().latitude >= rightBottomLatitude
+            p.getLocation().latitude >= rightBottomLatitude
             : p.getLocation().latitude <= leftTopLatitude ||
-                p.getLocation().latitude >= rightBottomLatitude;
+            p.getLocation().latitude >= rightBottomLatitude;
 
         final bool longQuery = (leftTopLongitude < rightBottomLongitude)
             ? p.getLocation().longitude >= leftTopLongitude &&
-                p.getLocation().longitude <= rightBottomLongitude
+            p.getLocation().longitude <= rightBottomLongitude
             : p.getLocation().longitude >= leftTopLongitude ||
-                p.getLocation().longitude <= rightBottomLongitude;
+            p.getLocation().longitude <= rightBottomLongitude;
         return latQuery && longQuery;
       }).toList();
 
@@ -132,6 +134,11 @@ class ClusteringHelper {
 
   List<ClusterItem> _retrieveAggregatedPoints(List<ClusterItem> inputList,
       List<ClusterItem> resultList, int level) {
+    var selected = inputList.firstWhere((p) => (p is StateItem && p.isSelected()), orElse: () {});
+    if (selected != null) {
+      resultList.add(selected);
+      inputList.removeWhere((p) => p is StateItem && p.isSelected());
+    }
     if (inputList.isEmpty) {
       return resultList;
     }
@@ -163,6 +170,7 @@ class ClusteringHelper {
   }
 
   Future<void> updateAggregatedPoints({double zoom = 0.0}) async {
+    isSingleMarkers = false;
     List<ClusterItem> aggregation = await getAggregatedPoints(zoom);
     print("aggregation lenght: " + aggregation.length.toString());
 
@@ -171,7 +179,7 @@ class ClusteringHelper {
     for (var i = 0; i < aggregation.length; i++) {
       final a = aggregation[i];
       BitmapDescriptor bitmapDescriptor =
-          await a.getBitmapDescriptor(aggregationSetup);
+      await a.getBitmapDescriptor(aggregationSetup);
       final MarkerId markerId = MarkerId(a.getId());
 
       final marker = Marker(
@@ -191,6 +199,9 @@ class ClusteringHelper {
 
   updatePoints(double zoom) async {
     print("update single points");
+    if (isSingleMarkers)
+      return;
+    isSingleMarkers = true;
     try {
       List<ClusterItem> listOfPoints;
       listOfPoints = list;
@@ -206,6 +217,7 @@ class ClusteringHelper {
             onTap: () {
               tapCallback(p);
             }));
+        markers.first.alpha = 0.5;
       }
       updateMarkers(markers);
     } catch (ex) {

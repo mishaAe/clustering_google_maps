@@ -5,6 +5,8 @@ import '../clustering_google_maps.dart';
 class StateItem extends ClusterItem {
   Future<BitmapDescriptor> getBitmapDescriptor(
       AggregationSetup aggregationSetup) async {
+    if (isSelected())
+      return getSelectedIcon();
     var icon = aggregationSetup.iconData[getState()];
     if (icon != null)
       return icon;
@@ -13,5 +15,13 @@ class StateItem extends ClusterItem {
 
   String getState() {
     return '';
+  }
+
+  bool isSelected() {
+    return false;
+  }
+
+  BitmapDescriptor getSelectedIcon() {
+    return BitmapDescriptor.defaultMarker;
   }
 }

@@ -50,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   initMemoryClustering() {
     clusteringHelper = ClusteringHelper.forMemory(
       list: widget.list,
-      updateMarkers: updateMarkers,
+      updateMarkers: setState,
       tapCallback: (ClusterItem item) {
         print("clicckedon");
         print(item);
