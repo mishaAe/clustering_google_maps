@@ -13,6 +13,8 @@ class AggregationSetup {
 
   final Map<String, BitmapDescriptor> iconData;
 
+  final BitmapDescriptor selectedIcon;
+
   final int markerSize;
 
   AggregationSetup({
@@ -36,7 +38,8 @@ class AggregationSetup {
       14.5,
     ],
     this.markerSize = 150,
-    this.iconData
+    this.iconData,
+    this.selectedIcon,
   })  : assert(maxAggregationItems.length == 6),
         assert(colors.length == 7),
         assert(maxZoomLimits.length == 7),

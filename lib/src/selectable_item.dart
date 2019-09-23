@@ -6,7 +6,7 @@ class StateItem extends ClusterItem {
   Future<BitmapDescriptor> getBitmapDescriptor(
       AggregationSetup aggregationSetup) async {
     if (isSelected())
-      return getSelectedIcon();
+      return aggregationSetup.selectedIcon;
     var icon = aggregationSetup.iconData[getState()];
     if (icon != null)
       return icon;
@@ -19,9 +19,5 @@ class StateItem extends ClusterItem {
 
   bool isSelected() {
     return false;
-  }
-
-  BitmapDescriptor getSelectedIcon() {
-    return BitmapDescriptor.defaultMarker;
   }
 }
