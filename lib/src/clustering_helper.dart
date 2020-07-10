@@ -171,10 +171,10 @@ class ClusteringHelper {
 
   Future<void> updateAggregatedPoints({double zoom = 0.0}) async {
     isSingleMarkers = false;
-    List<ClusterItem> aggregation = await getAggregatedPoints(zoom);
-    print("aggregation lenght: " + aggregation.length.toString());
+    final List<ClusterItem> aggregation = await getAggregatedPoints(zoom);
+    print("aggregation length: " + aggregation.length.toString());
 
-    final Set<Marker> markers = Set();
+    Set<Marker> markers = Set();
 
     for (var i = 0; i < aggregation.length; i++) {
       final a = aggregation[i];
@@ -198,13 +198,12 @@ class ClusteringHelper {
   }
 
   updatePoints(double zoom) async {
-    print("update single points");
-    if (isSingleMarkers)
-      return;
+    if (isSingleMarkers) {
+      updatePoint(zoom);
+    }
     isSingleMarkers = true;
     try {
-      List<ClusterItem> listOfPoints;
-      listOfPoints = list;
+      final List<ClusterItem> listOfPoints = list;
       Set<Marker> markers = Set();
       for (ClusterItem p in listOfPoints) {
         final MarkerId markerId = MarkerId(p.getId());
@@ -223,4 +222,34 @@ class ClusteringHelper {
       print(ex.toString());
     }
   }
+
+  //handle single point update
+  updatePoint(double zoom) async {
+    try{
+      final List<ClusterItem> aggregation = await getAggregatedPoints(zoom);
+      final ClusterItem point = aggregation.first;
+      final BitmapDescriptor bitmap = await point.getBitmapDescriptor(aggregationSetup);
+      final MarkerId markerId = MarkerId(point.getId());
+
+      Set<Marker> markers = Set();
+
+      markers.add(Marker(
+          markerId: markerId,
+          position: point.getLocation(),
+          consumeTapEvents: true,
+          icon: bitmap,
+          onTap: () {
+            tapCallback(point);
+          }
+      ));
+
+      isSingleMarkers = false;
+      updateMarkers(markers);
+
+    } catch (err) {
+      print(err.toString());
+    }
+
+  }
+
 }
