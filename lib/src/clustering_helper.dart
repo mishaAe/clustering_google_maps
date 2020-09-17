@@ -53,26 +53,26 @@ class ClusteringHelper {
 
   //Call when user stop to move or zoom the map
   Future<void> onMapIdle() async {
-    updateMap();
+    await updateMap();
   }
 
-  updateMap() {
+  Future<void> updateMap() async {
     if (currentZoom < maxZoomForAggregatePoints) {
-      updateAggregatedPoints(zoom: currentZoom);
+      await updateAggregatedPoints(zoom: currentZoom);
     } else {
       if (showSinglePoint != null) {
         showSinglePoint();
       } else {
-        updatePoints(currentZoom);
+        await updatePoints(currentZoom);
       }
     }
   }
 
   // Used for update list
   // NOT RECCOMENDED for good performance (SQL IS BETTER)
-  updateData(List<ClusterItem> newList) {
+  Future<void> updateData(List<ClusterItem> newList) async {
     list = newList;
-    updateMap();
+    await updateMap();
   }
 
   int getZoomLevel(double zoom) {
@@ -96,8 +96,7 @@ class ClusteringHelper {
   }
 
   Future<List<ClusterItem>> getAggregatedPoints(double zoom) async {
-    print("loading aggregation");
-    int level = getZoomLevel(zoom);
+    final int level = getZoomLevel(zoom);
 
     try {
       List<ClusterItem> aggregatedPoints;
@@ -129,8 +128,6 @@ class ClusteringHelper {
       return List<ClusterItem>();
     }
   }
-
-  final List<ClusterItem> aggList = [];
 
   List<ClusterItem> _retrieveAggregatedPoints(List<ClusterItem> inputList,
       List<ClusterItem> resultList, int level) {
@@ -197,9 +194,9 @@ class ClusteringHelper {
     updateMarkers(markers);
   }
 
-  updatePoints(double zoom) async {
+  Future<void> updatePoints(double zoom) async {
     if (isSingleMarkers) {
-      updatePoint(zoom);
+      await updatePoint(zoom);
     }
     isSingleMarkers = true;
     try {
@@ -224,7 +221,7 @@ class ClusteringHelper {
   }
 
   //handle single point update
-  updatePoint(double zoom) async {
+  Future<void> updatePoint(double zoom) async {
     try{
       final List<ClusterItem> aggregation = await getAggregatedPoints(zoom);
       final ClusterItem point = aggregation.first;
