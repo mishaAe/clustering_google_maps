@@ -11,9 +11,9 @@ class AggregationSetup {
   /// List of double, they are the limit of zoom when change the aggregation level
   final List<double> maxZoomLimits;
 
-  final Map<String, BitmapDescriptor> iconData;
+  final Map<String, BitmapDescriptor>? iconData;
 
-  final BitmapDescriptor selectedIcon;
+  final BitmapDescriptor? selectedIcon;
 
   final int markerSize;
 

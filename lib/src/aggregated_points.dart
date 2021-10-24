@@ -14,7 +14,7 @@ class AggregatedPoints extends ClusterItem {
   AggregatedPoints.fromMap(
       Map<String, dynamic> map, String dbLatColumn, String dbLongColumn)
       : count = map['n_marker'],
-        this.location = LatLng(map['lat'], map['long']) {}
+        this.location = LatLng(map['lat'], map['long']);
 
   LatLng getLocation() {
     return location;
@@ -31,7 +31,7 @@ class AggregatedPoints extends ClusterItem {
       AggregationSetup aggregationSetup) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
-    final Paint paint1 = Paint()..color = color[800];
+    final Paint paint1 = Paint()..color = color[800]!;
     final Paint paint2 = Paint()..color = Colors.white54;
     final int size = aggregationSetup.markerSize;
     canvas.drawCircle(Offset(size / 2, size / 2), size / 2.0, paint2);
@@ -50,7 +50,7 @@ class AggregatedPoints extends ClusterItem {
 
     final img = await pictureRecorder.endRecording().toImage(size, size);
     final data = await img.toByteData(format: ui.ImageByteFormat.png);
-    return data.buffer.asUint8List();
+    return data!.buffer.asUint8List();
   }
 
   MaterialColor getColor(AggregationSetup aggregationSetup, int count) {
