@@ -118,7 +118,6 @@ class ClusteringHelper {
             p.getLocation()!.longitude <= rightBottomLongitude;
         return latQuery && longQuery;
       }).toList();
-      //print('DEBUG listBounds -> ${listBounds.length}');
       aggregatedPoints = _retrieveAggregatedPoints(listBounds, <ClusterItem>[], level);
       return aggregatedPoints;
     } catch (e) {
