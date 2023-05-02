@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:dart_geohash/dart_geohash.dart';
 import '../clustering_google_maps.dart';
 
 class ClusterItem {
+
   LatLng? getLocation() {
     return null;
   }
@@ -11,13 +13,15 @@ class ClusterItem {
     return null;
   }
 
-  Future<BitmapDescriptor>?  getBitmapDescriptor(
-      AggregationSetup  aggregationSetup) async {
+  Future<BitmapDescriptor>? getBitmapDescriptor(AggregationSetup aggregationSetup) async {
+    await null;
     return BitmapDescriptor.defaultMarker;
   }
 
   String getGeoHash() {
-    final geoHash = GeoHasher();
-    return geoHash.encode(getLocation()!.latitude, getLocation()!.longitude);
+    return GeoHasher().encode(
+      getLocation()?.longitude ?? 0.0,
+      getLocation()?.latitude ?? 0.0,
+    );
   }
 }
