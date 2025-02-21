@@ -12,3 +12,6 @@ ios/.symlinks
 
 #api key files
 **/example/android/app/src/main/res/values/strings.xml
+
+# FVM Version Cache
+.fvm/

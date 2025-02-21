@@ -24,7 +24,7 @@ class AggregatedPoints extends ClusterItem {
       AggregationSetup aggregationSetup) async {
     final Uint8List markerIcon = await getBytesFromCanvas(
         count.toString(), getColor(aggregationSetup, count), aggregationSetup);
-    return BitmapDescriptor.fromBytes(markerIcon);
+    return BitmapDescriptor.bytes(markerIcon);
   }
 
   Future<Uint8List> getBytesFromCanvas(String text, MaterialColor color,

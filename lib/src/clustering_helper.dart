@@ -1,8 +1,5 @@
 import 'dart:async';
 import 'package:clustering_google_maps/clustering_google_maps.dart';
-import 'package:clustering_google_maps/src/aggregated_points.dart';
-import 'package:clustering_google_maps/src/aggregation_setup.dart';
-import 'package:clustering_google_maps/src/cluster_item.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -15,50 +12,30 @@ class ClusteringHelper {
     required this.aggregationSetup,
   });
 
-  //After this value the map show the single points without aggregation
   final double maxZoomForAggregatePoints;
-
-  //Custom bitmap: string of assets position
   final AggregationSetup aggregationSetup;
+  final Function updateMarkers;
+  final Function tapCallback;
+  final List<ClusterItem> list;
 
   GoogleMapController? mapController;
-
-  //Variable for save the last zoom
   double currentZoom = 0.0;
-
-  //Function called when the map must show single point without aggregation
-  // if null the class use the default function
   Function? showSinglePoint;
+  bool _isSingleMarkers = true;
 
-  //Function for update Markers on Google Map
-  Function updateMarkers;
-
-  Function tapCallback;
-  late bool isSingleMarkers;
-
-  //List of points for memory clustering
-  List<ClusterItem> list;
-
-  //Call during the editing of CameraPosition
-  //If you want updateMap during the zoom in/out set forceUpdate to true
-  //this is NOT RECOMMENDED
-  onCameraMove(CameraPosition position, {forceUpdate = false}) {
+  Future<void> onCameraMove(CameraPosition position, {bool forceUpdate = false}) async {
     currentZoom = position.zoom;
     if (forceUpdate) {
-      updateMap();
+      await updateMap();
     }
   }
 
-  //Call when user stop to move or zoom the map
-  Future<void> onMapIdle() async {
-    await updateMap();
-  }
+  Future<void> onMapIdle() => updateMap();
 
   Future<void> updateMap() async {
     if (currentZoom < maxZoomForAggregatePoints) {
       await updateAggregatedPoints(zoom: currentZoom);
     } else {
-      await updatePoints(currentZoom);
       if (showSinglePoint != null) {
         showSinglePoint!();
       } else {
@@ -67,174 +44,188 @@ class ClusteringHelper {
     }
   }
 
-  // Used for update list
-  // NOT RECOMMENDED for good performance (SQL IS BETTER)
   Future<void> updateData(List<ClusterItem> newList) async {
-    list = newList;
+    list.clear();
+    list.addAll(newList);
     await updateMap();
   }
 
   int getZoomLevel(double zoom) {
-    int level;
-    if (zoom <= aggregationSetup.maxZoomLimits[0]) {
-      level = 1;
-    } else if (zoom < aggregationSetup.maxZoomLimits[1]) {
-      level = 2;
-    } else if (zoom < aggregationSetup.maxZoomLimits[2]) {
-      level = 3;
-    } else if (zoom < aggregationSetup.maxZoomLimits[3]) {
-      level = 4;
-    } else if (zoom < aggregationSetup.maxZoomLimits[4]) {
-      level = 5;
-    } else if (zoom < aggregationSetup.maxZoomLimits[5]) {
-      level = 6;
-    } else if (zoom < aggregationSetup.maxZoomLimits[6]) {
-      level = 7;
-    } else {
-      level = 8;
+    final limits = aggregationSetup.maxZoomLimits;
+    for (int i = 0; i < limits.length; i++) {
+      if (zoom <= limits[i]) return i + 1;
     }
-    return level;
+    return limits.length + 1;
   }
 
   Future<List<ClusterItem>> getAggregatedPoints(double zoom) async {
-    final int level = getZoomLevel(zoom);
-
     try {
-      List<ClusterItem> aggregatedPoints;
       final latLngBounds = await mapController?.getVisibleRegion();
-      final listBounds = list.where((p) {
-        final double leftTopLatitude = latLngBounds!.northeast.latitude;
-        final double leftTopLongitude = latLngBounds.southwest.longitude;
-        final double rightBottomLatitude = latLngBounds.southwest.latitude;
-        final double rightBottomLongitude = latLngBounds.northeast.longitude;
+      if (latLngBounds == null) return [];
 
-        final bool latQuery = (leftTopLatitude > rightBottomLatitude)
-            ? p.getLocation()!.latitude <= leftTopLatitude && p.getLocation()!.latitude >= rightBottomLatitude
-            : p.getLocation()!.latitude <= leftTopLatitude || p.getLocation()!.latitude >= rightBottomLatitude;
-
-        final bool longQuery = (leftTopLongitude < rightBottomLongitude)
-            ? p.getLocation()!.longitude >= leftTopLongitude && p.getLocation()!.longitude <= rightBottomLongitude
-            : p.getLocation()!.longitude >= leftTopLongitude || p.getLocation()!.longitude <= rightBottomLongitude;
-        return latQuery && longQuery;
-      }).toList();
-      aggregatedPoints = _retrieveAggregatedPoints(listBounds, <ClusterItem>[], level);
-
-      return aggregatedPoints;
-    } catch (e ,st ) {
-      debugPrint('getAggregatedPoints error $e $st');
-      return <ClusterItem>[];
+      final filteredList = _getPointsInBounds(list, latLngBounds);
+      return _retrieveAggregatedPoints(
+          filteredList,
+          <ClusterItem>[],
+          getZoomLevel(zoom)
+      );
+    } catch (e, st) {
+      debugPrint('getAggregatedPoints error: $e\n$st');
+      return [];
     }
   }
 
-  List<ClusterItem> _retrieveAggregatedPoints(
-    List<ClusterItem> inputList,
-    List<ClusterItem> resultList,
-    int level,
-  ) {
-    if (inputList.isEmpty) {
-      return resultList;
-    }
-    final List<ClusterItem> newInputList = List.from(inputList);
-    List<ClusterItem> tmp;
-    final t = newInputList[0].getGeoHash().substring(0, level);
+  List<ClusterItem> _getPointsInBounds(List<ClusterItem> points, LatLngBounds bounds) {
+    return points.where((p) {
+      final location = p.getLocation();
+      if (location == null) return false;
 
-    tmp = newInputList.where((p) => p.getGeoHash().substring(0, level) == t).toList();
-    newInputList.removeWhere((p) => p.getGeoHash().substring(0, level) == t);
-    double latitude = 0;
-    double longitude = 0;
+      final lat = location.latitude;
+      final lng = location.longitude;
+      final ne = bounds.northeast;
+      final sw = bounds.southwest;
 
-    tmp.forEach((l) {
-      latitude += l.getLocation()!.latitude;
-      longitude += l.getLocation()!.longitude;
-    });
-    final count = tmp.length;
-    ClusterItem a;
-    if (tmp.length == 1) {
-      a = tmp[0];
-    }
-    else {
-      a = AggregatedPoints(LatLng(latitude / count, longitude / count), count);
-    }
+      final latValid = (ne.latitude > sw.latitude)
+          ? lat <= ne.latitude && lat >= sw.latitude
+          : lat <= ne.latitude || lat >= sw.latitude;
 
-    resultList.add(a);
-    return _retrieveAggregatedPoints(newInputList, resultList, level);
+      final lngValid = (sw.longitude < ne.longitude)
+          ? lng >= sw.longitude && lng <= ne.longitude
+          : lng >= sw.longitude || lng <= ne.longitude;
+
+      return latValid && lngValid;
+    }).toList();
   }
 
   Future<void> updateAggregatedPoints({double zoom = 0.0}) async {
-    isSingleMarkers = false;
-    final List<ClusterItem> aggregation = await getAggregatedPoints(zoom);
-    debugPrint("aggregation length: " + aggregation.length.toString());
-    final Set<Marker> markers = Set();
+    _isSingleMarkers = false;
+    final aggregation = await getAggregatedPoints(zoom);
+    final markers = <Marker>{};
 
-    for (var i = 0; i < aggregation.length; i++) {
-      final a = aggregation[i];
-      BitmapDescriptor? bitmapDescriptor = await a.getBitmapDescriptor(aggregationSetup);
-      final MarkerId markerId = MarkerId(a.getId() ?? '');
+    for (final point in aggregation) {
+      final bitmapDescriptor = await point.getBitmapDescriptor(aggregationSetup);
+      if (bitmapDescriptor == null) continue;
 
-      final marker = Marker(
-        onTap: () {
-          tapCallback(a);
-        },
+      final id = point.getId();
+      if (id == null) continue;
+
+      final location = point.getLocation();
+      if (location == null) continue;
+
+      markers.add(Marker(
+        markerId: MarkerId(id),
+        position: location,
+        icon: bitmapDescriptor,
         consumeTapEvents: true,
-        markerId: markerId,
-        position: a.getLocation()!,
-        icon: bitmapDescriptor!,
-      );
-
-      markers.add(marker);
+        onTap: () => tapCallback(point),
+      ));
     }
+
     updateMarkers(markers);
   }
 
   Future<void> updatePoints(double zoom) async {
-    if (isSingleMarkers) {
+    if (_isSingleMarkers) {
       await updatePoint(zoom);
+      return;
     }
-    isSingleMarkers = true;
+
     try {
-      final List<ClusterItem> listOfPoints = list;
-      Set<Marker> markers = Set();
-      for (ClusterItem p in listOfPoints) {
-        final MarkerId markerId = MarkerId(p.getId()!);
-        BitmapDescriptor bitmap = await p.getBitmapDescriptor(aggregationSetup)!;
+      final markers = <Marker>{};
+      for (final point in list) {
+        final id = point.getId();
+        final location = point.getLocation();
+        final bitmap = await point.getBitmapDescriptor(aggregationSetup);
+
+        if (id == null || location == null || bitmap == null) continue;
+
         markers.add(Marker(
-            markerId: markerId,
-            position: p.getLocation()!,
-            consumeTapEvents: true,
-            icon: bitmap,
-            onTap: () {
-              tapCallback(p);
-            }));
+          markerId: MarkerId(id),
+          position: location,
+          icon: bitmap,
+          consumeTapEvents: true,
+          onTap: () => tapCallback(point),
+        ));
       }
+
+      _isSingleMarkers = true;
       updateMarkers(markers);
-    } catch (ex) {
-      print(ex.toString());
+    } catch (e) {
+      debugPrint('Error updating points: $e');
     }
   }
 
-  //handle single point update
   Future<void> updatePoint(double zoom) async {
     try {
-      final List<ClusterItem> aggregation = await getAggregatedPoints(zoom);
-      final ClusterItem point = aggregation.first;
-      final BitmapDescriptor bitmap = await point.getBitmapDescriptor(aggregationSetup)!;
-      final MarkerId markerId = MarkerId(point.getId()!);
+      final aggregation = await getAggregatedPoints(zoom);
+      if (aggregation.isEmpty) return;
 
-      final Set<Marker> markers = Set();
+      final point = aggregation.first;
+      final bitmap = await point.getBitmapDescriptor(aggregationSetup);
+      final id = point.getId();
+      final location = point.getLocation();
 
-      markers.add(Marker(
-          markerId: markerId,
-          position: point.getLocation()!,
-          consumeTapEvents: true,
+      if (bitmap == null || id == null || location == null) return;
+
+      final markers = {
+        Marker(
+          markerId: MarkerId(id),
+          position: location,
           icon: bitmap,
-          onTap: () {
-            tapCallback(point);
-          }));
+          consumeTapEvents: true,
+          onTap: () => tapCallback(point),
+        )
+      };
 
-      isSingleMarkers = false;
+      _isSingleMarkers = false;
       updateMarkers(markers);
-    } catch (err) {
-      print(err.toString());
+    } catch (e) {
+      debugPrint('Error updating single point: $e');
     }
+  }
+
+  List<ClusterItem> _retrieveAggregatedPoints(
+      List<ClusterItem> inputList,
+      List<ClusterItem> resultList,
+      int level,
+      ) {
+    if (inputList.isEmpty) {
+      return resultList;
+    }
+
+    final newInputList = List<ClusterItem>.from(inputList);
+    final geoHash = newInputList[0].getGeoHash().substring(0, level);
+
+    final matchingPoints = newInputList.where(
+            (p) => p.getGeoHash().substring(0, level) == geoHash
+    ).toList();
+
+    newInputList.removeWhere(
+            (p) => p.getGeoHash().substring(0, level) == geoHash
+    );
+
+    if (matchingPoints.length == 1) {
+      resultList.add(matchingPoints[0]);
+    } else {
+      double latitude = 0;
+      double longitude = 0;
+
+      for (final point in matchingPoints) {
+        final location = point.getLocation();
+        if (location != null) {
+          latitude += location.latitude;
+          longitude += location.longitude;
+        }
+      }
+
+      final count = matchingPoints.length;
+      final aggregatedPoint = AggregatedPoints(
+          LatLng(latitude / count, longitude / count),
+          count
+      );
+      resultList.add(aggregatedPoint);
+    }
+
+    return _retrieveAggregatedPoints(newInputList, resultList, level);
   }
 }

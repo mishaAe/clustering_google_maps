@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:dart_geohash/dart_geohash.dart';
 import '../clustering_google_maps.dart';
