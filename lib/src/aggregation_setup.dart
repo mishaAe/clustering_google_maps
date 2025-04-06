@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class AggregationSetup {
-  /// List of integern number, they are the limit of aggregation range
+  /// List of integer number, they are the limit of aggregation range
   final List<int> maxAggregationItems;
 
   /// List of MaterialColor, they are the color of the marker matching aggregation range

@@ -21,7 +21,6 @@ class ClusteringHelper {
   GoogleMapController? mapController;
   double currentZoom = 0.0;
   Function? showSinglePoint;
-  bool _isSingleMarkers = true;
 
   Future<void> onCameraMove(CameraPosition position, {bool forceUpdate = false}) async {
     currentZoom = position.zoom;
@@ -33,14 +32,20 @@ class ClusteringHelper {
   Future<void> onMapIdle() => updateMap();
 
   Future<void> updateMap() async {
-    if (currentZoom < maxZoomForAggregatePoints) {
-      await updateAggregatedPoints(zoom: currentZoom);
-    } else {
-      if (showSinglePoint != null) {
-        showSinglePoint!();
+    try {
+      if (currentZoom < maxZoomForAggregatePoints) {
+        await updateAggregatedPoints(zoom: currentZoom);
       } else {
-        await updatePoints(currentZoom);
+        if (showSinglePoint != null) {
+          showSinglePoint!();
+        } else {
+          await updatePoints(currentZoom);
+        }
       }
+    } catch (e, st) {
+      debugPrint('Error in updateMap: $e\n$st');
+      // Fallback to showing all points if there's an error
+      await updatePoints(currentZoom);
     }
   }
 
@@ -64,11 +69,7 @@ class ClusteringHelper {
       if (latLngBounds == null) return [];
 
       final filteredList = _getPointsInBounds(list, latLngBounds);
-      return _retrieveAggregatedPoints(
-          filteredList,
-          <ClusterItem>[],
-          getZoomLevel(zoom)
-      );
+      return _retrieveAggregatedPoints(filteredList, <ClusterItem>[], getZoomLevel(zoom));
     } catch (e, st) {
       debugPrint('getAggregatedPoints error: $e\n$st');
       return [];
@@ -89,16 +90,18 @@ class ClusteringHelper {
           ? lat <= ne.latitude && lat >= sw.latitude
           : lat <= ne.latitude || lat >= sw.latitude;
 
-      final lngValid = (sw.longitude < ne.longitude)
-          ? lng >= sw.longitude && lng <= ne.longitude
-          : lng >= sw.longitude || lng <= ne.longitude;
+      double lngMin = sw.longitude;
+      double lngMax = ne.longitude;
 
-      return latValid && lngValid;
+      if (lngMin > lngMax) {
+        return latValid && (lng >= lngMin || lng <= lngMax);
+      } else {
+        return latValid && (lng >= lngMin && lng <= lngMax);
+      }
     }).toList();
   }
 
   Future<void> updateAggregatedPoints({double zoom = 0.0}) async {
-    _isSingleMarkers = false;
     final aggregation = await getAggregatedPoints(zoom);
     final markers = <Marker>{};
 
@@ -125,11 +128,6 @@ class ClusteringHelper {
   }
 
   Future<void> updatePoints(double zoom) async {
-    if (_isSingleMarkers) {
-      await updatePoint(zoom);
-      return;
-    }
-
     try {
       final markers = <Marker>{};
       for (final point in list) {
@@ -148,10 +146,11 @@ class ClusteringHelper {
         ));
       }
 
-      _isSingleMarkers = true;
       updateMarkers(markers);
-    } catch (e) {
-      debugPrint('Error updating points: $e');
+    } catch (e, st) {
+      debugPrint('Error updating points: $e\n$st');
+      // Ensure markers are cleared on error to prevent stale state
+      updateMarkers({});
     }
   }
 
@@ -177,7 +176,6 @@ class ClusteringHelper {
         )
       };
 
-      _isSingleMarkers = false;
       updateMarkers(markers);
     } catch (e) {
       debugPrint('Error updating single point: $e');
@@ -185,10 +183,10 @@ class ClusteringHelper {
   }
 
   List<ClusterItem> _retrieveAggregatedPoints(
-      List<ClusterItem> inputList,
-      List<ClusterItem> resultList,
-      int level,
-      ) {
+    List<ClusterItem> inputList,
+    List<ClusterItem> resultList,
+    int level,
+  ) {
     if (inputList.isEmpty) {
       return resultList;
     }
@@ -196,13 +194,9 @@ class ClusteringHelper {
     final newInputList = List<ClusterItem>.from(inputList);
     final geoHash = newInputList[0].getGeoHash().substring(0, level);
 
-    final matchingPoints = newInputList.where(
-            (p) => p.getGeoHash().substring(0, level) == geoHash
-    ).toList();
+    final matchingPoints = newInputList.where((p) => p.getGeoHash().substring(0, level) == geoHash).toList();
 
-    newInputList.removeWhere(
-            (p) => p.getGeoHash().substring(0, level) == geoHash
-    );
+    newInputList.removeWhere((p) => p.getGeoHash().substring(0, level) == geoHash);
 
     if (matchingPoints.length == 1) {
       resultList.add(matchingPoints[0]);
@@ -219,10 +213,7 @@ class ClusteringHelper {
       }
 
       final count = matchingPoints.length;
-      final aggregatedPoint = AggregatedPoints(
-          LatLng(latitude / count, longitude / count),
-          count
-      );
+      final aggregatedPoint = AggregatedPoints(LatLng(latitude / count, longitude / count), count);
       resultList.add(aggregatedPoint);
     }
 
